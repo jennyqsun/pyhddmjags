@@ -462,106 +462,21 @@ def recovery(possamps, truevals):  # Parameter recovery plots
 
 
 
-### Simulations ###
-
-# Generate samples from the joint-model of reaction time and choice
-
-# if not os.path.exists('data/genparam_test1.mat'):
-
-# Number of simulated participants
-nparts = 1
-
-# Number of conditions
-nconds = 3
-
-# Number of trials per participant and condition
-ntrials = 352
-
-# Number of total trials in each simulation
-N = ntrials*nparts*nconds
-
-# Set random seed
-random.seed(2020)
-
-ndt = np.random.uniform(.15, .6, size=(nparts)) # Uniform from .15 to .6 seconds
-alpha = np.random.uniform(.8, 1.4, size=(nparts)) # Uniform from .8 to 1.4 evidence units
-beta = np.random.uniform(.3, .7, size=(nparts)) # Uniform from .3 to .7 * alpha
-delta = np.random.uniform(-4, 4, size=(nparts, nconds)) # Uniform from -4 to 4 evidence units per second
-ndttrialrange = np.random.uniform(0,.1, size=(nparts)) # Uniform from 0 to .1 seconds
-deltatrialsd = np.random.uniform(0, 2, size=(nparts)) # Uniform from 0 to 2 evidence units per second
-prob_lapse = np.random.uniform(0, 10, size=(nparts)) # From 0 to 10 percent of trials
-y = np.zeros((N))
-rt = np.zeros((N))
-acc = np.zeros((N))
-participant = np.zeros((N)) #Participant index
-condition = np.zeros((N)) #Condition index
-indextrack = np.arange(ntrials)
-for p in range(nparts):
-    for k in range(nconds):
-        tempout = simulratcliff(N=ntrials, Alpha= alpha[p], Tau= ndt[p], Beta=beta[p], 
-            Nu= delta[p,k], Eta= deltatrialsd[p], rangeTau=ndttrialrange[p])
-        tempx = np.sign(np.real(tempout))
-        tempt = np.abs(np.real(tempout))
-        mindwanderx = np.random.randint(low=0,high=2,size=ntrials)*2 -1
-        mindwandert = np.random.uniform(low=0,high=2,size=ntrials) # Randomly distributed from 0 to 2 seconds
-
-        mindwander_trials = np.random.choice(ntrials, size=np.int(np.round(ntrials*(prob_lapse[p]/100))), replace=False)
-        tempx[mindwander_trials] = mindwanderx[mindwander_trials]
-        tempt[mindwander_trials] = mindwandert[mindwander_trials]
-        y[indextrack] = tempx*tempt
-        rt[indextrack] = tempt
-        acc[indextrack] = (tempx + 1)/2
-        participant[indextrack] = p+1
-        condition[indextrack] = k+1
-        indextrack += ntrials
-
-datadict = read_mat('/home/mariel/pdmattention/task3/s211_behavior_final.mat')
-
+### Read in Data ###
+datadict = read_mat('/home/ramesh/pdmattention/task3/s198_behavior_final.mat')
 
 genparam = dict()
-genparam['ndt'] = ndt
-genparam['beta'] = beta
-genparam['alpha'] = alpha
-genparam['delta'] = delta
-genparam['ndttrialrange'] = ndttrialrange
-genparam['deltatrialsd'] = deltatrialsd
-genparam['prob_lapse'] = prob_lapse
 genparam['rt'] = datadict['rt']
 genparam['acc'] = datadict['correct']
 genparam['y'] = datadict['rt'] * np.sign(datadict['correct']-1/2)
 genparam['participant'] = [1]*len(datadict['rt'])
 genparam['condition'] = datadict['condition']
-genparam['nparts'] = nparts
-genparam['nconds'] = nconds
-genparam['ntrials'] = ntrials
-genparam['N'] = N
+genparam['nparts'] = 1
+genparam['nconds'] = 3
+genparam['ntrials'] = 116
+genparam['N'] = len(datadict['rt'])
 sio.savemat('/home/mariel/Documents/Projects2/genparam_test1.mat', genparam)
 
-'''
-
-genparam = dict()
-genparam['ndt'] = ndt
-genparam['beta'] = beta
-genparam['alpha'] = alpha
-genparam['delta'] = delta
-genparam['ndttrialrange'] = ndttrialrange
-genparam['deltatrialsd'] = deltatrialsd
-genparam['prob_lapse'] = prob_lapse
-genparam['rt'] = rt
-genparam['acc'] = acc
-genparam['y'] = y
-genparam['participant'] = participant
-genparam['condition'] = condition
-genparam['nparts'] = nparts
-genparam['nconds'] = nconds
-genparam['ntrials'] = ntrials
-genparam['N'] = N
-sio.savemat('/home/mariel/Documents/Projects2/genparam_test1.mat', genparam)
-
-'''
-
-# else:
-#     genparam = sio.loadmat('data/genparam_test1.mat')
 
 # JAGS code
 

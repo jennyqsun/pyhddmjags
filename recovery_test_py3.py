@@ -523,7 +523,7 @@ genparam['nparts'] = nparts
 genparam['nconds'] = nconds
 genparam['ntrials'] = ntrials
 genparam['N'] = N
-sio.savemat('data/genparam_test1.mat', genparam)
+sio.savemat('/home/mariel/Documents/Projects2/genparam_test1.mat', genparam)
 # else:
 #     genparam = sio.loadmat('data/genparam_test1.mat')
 
