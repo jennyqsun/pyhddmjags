@@ -466,14 +466,13 @@ def recovery(possamps, truevals):  # Parameter recovery plots
 datadict = read_mat('/home/ramesh/pdmattention/task3/s198_behavior_final.mat')
 
 genparam = dict()
-genparam['rt'] = datadict['rt']
+genparam['rt'] = datadict['rt']/1000
 genparam['acc'] = datadict['correct']
-genparam['y'] = datadict['rt'] * np.sign(datadict['correct']-1/2)
+genparam['y'] = datadict['rt']/1000 * np.sign(datadict['correct']-1/2)
 genparam['participant'] = [1]*len(datadict['rt'])
 genparam['condition'] = datadict['condition']
 genparam['nparts'] = 1
 genparam['nconds'] = 3
-genparam['ntrials'] = 116
 genparam['N'] = len(datadict['rt'])
 sio.savemat('/home/mariel/Documents/Projects2/genparam_test1.mat', genparam)
 
@@ -622,7 +621,7 @@ participant = np.squeeze(genparam['participant'])
 condition = np.squeeze(genparam['condition'])
 nparts = np.squeeze(genparam['nparts'])
 nconds = np.squeeze(genparam['nconds'])
-ntrials = np.squeeze(genparam['ntrials'])
+
 
 minrt = np.zeros(nparts)
 for p in range(0,nparts):
@@ -650,7 +649,7 @@ for c in range(0, nchains):
         'problapsehier': np.random.uniform(.01, .1)
     }
     for p in range(0, nparts):
-        chaininit['ter'][p] = np.random.uniform(0., 0)
+        chaininit['ter'][p] = np.random.uniform(0., minrt[p]/2)
     initials.append(chaininit)
 print('Fitting model 1 ...')
 threaded = pyjags.Model(file=modelfile, init=initials,
