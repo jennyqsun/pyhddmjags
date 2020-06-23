@@ -690,23 +690,3 @@ plt.title('Posterior distributions of boundary parameter')
 plt.savefig(('figures/alpha_posteriors_model1.png'), format='png',bbox_inches="tight")
 
 #Recovery
-plt.figure()
-recovery(samples['delta'],genparam['delta'][:, :])
-plt.title('Recovery of the drift-rate')
-plt.savefig(('figures/delta_recovery_model1.png'), format='png',bbox_inches="tight")
-
-plt.figure()
-recovery(samples['ter'],genparam['ndt'])
-plt.title('Recovery of the non-decision time parameter')
-plt.savefig(('figures/ter_recovery_model1.png'), format='png',bbox_inches="tight")
-
-plt.figure()
-recovery(samples['beta'],genparam['beta'])
-plt.title('Recovery of the start point parameter')
-plt.savefig(('figures/beta_recovery_model1.png'), format='png',bbox_inches="tight")
-
-plt.figure()
-recovery(samples['alpha'],genparam['alpha'])
-plt.title('Recovery of boundary parameter')
-plt.savefig(('figures/alpha_recovery_model1.png'), format='png',bbox_inches="tight")
-
