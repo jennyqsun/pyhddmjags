@@ -482,257 +482,241 @@ def recovery(possamps, truevals):  # Parameter recovery plots
     recoverline = plt.plot(tempx, tempx)
     plt.setp(recoverline, linewidth=3, color=orange)
 
-
-
-### Read in Data ###
+if subjectlvl == 2:
+    filename = diffusion.AllSubsMat(basedir, taskNum, lvlAnalysis, filetype)
+    datadict = read_mat(filename)
     
-if subjectlvl == 1:
-    path = diffusion.get_paths(basedir, taskNum)
-    subIDs= diffusion.choose_subs(lvlAnalysis, path)
-    subIDs.remove('s193_ses2_')
+    genparam = dict()
+    genparam['rt'] = datadict['rt']
+    genparam['acc'] = datadict['acc']
+    genparam['y'] = datadict['y']
+    genparam['participant'] = datadict['participant']
+    genparam['condition'] = datadict['condition']
+    genparam['nparts'] = datadict['nparts']
+    genparam['nconds'] = datadict['nconds']
+    genparam['N'] = len(datadict['rt'])
     
-    count = 0 
+    saveFile = '/home/mariel/Documents/Projects2/' + 'allsubs_test1.mat'
+    sio.savemat(saveFile, genparam)
     
-    for subject in subIDs:
-        print(subject[0:4], count+1)
-        count = count +1
+    
+    # JAGS code
+    
+    # Set random seed
+    random.seed(2020)
+    
+    tojags = '''
+    model {
         
-        filename = path + '/' + subject[0:4] + '_behavior_final.mat'
-        subjectNum = int(subject[1:4])
-        datadict = read_mat(filename)
-        
-        genparam = dict()
-        genparam['rt'] = datadict['rt']/1000
-        genparam['acc'] = datadict['correct']
-        genparam['y'] = datadict['rt']/1000 * np.sign(datadict['correct']-1/2)
-        genparam['participant'] = [1]*len(datadict['rt'])
-        genparam['condition'] = datadict['condition']
-        genparam['nparts'] = 1
-        genparam['nconds'] = 3
-        genparam['N'] = len(datadict['rt'])
-        
-        saveFile = '/home/mariel/Documents/Projects2/' + subject[0:4] + '_test1.mat'
-        sio.savemat(saveFile, genparam)
-        
-        
-        # JAGS code
-        
-        # Set random seed
-        random.seed(2020)
-        
-        tojags = '''
-        model {
-            
-            ##########
-            #Between-condition variability parameters priors
-            ##########
-        
-            #Between-condition variability in drift rate to choice A
-            deltasdcond ~ dgamma(1,1)
-        
-            ##########
-            #Between-participant variability parameters priors
-            ##########
-        
-            #Between-participant variability in non-decision time
-            tersd ~ dgamma(.3,1)
-        
-            #Between-participant variability in Speed-accuracy trade-off
-            alphasd ~ dgamma(1,1)
-        
-            #Between-participant variability in choice A start point bias
-            betasd ~ dgamma(.3,1)
-        
-            #Between-participant variability in lapse trial probability
-            problapsesd ~ dgamma(.3,1)
-        
-            #Between-participant variability in drift rate to choice A
-            deltasd ~ dgamma(1,1)
-        
-            ##########
-            #Hierarchical DDM parameter priors
-            ##########
-        
-            #Hierarchical Non-decision time
-            terhier ~ dnorm(.5, pow(.25,-2))
-        
-            #Hierarchical boundary parameter (speed-accuracy tradeoff)
-            alphahier ~ dnorm(1, pow(.5,-2))
-        
-            #Hierarchical start point bias towards choice A
-            betahier ~ dnorm(.5, pow(.25,-2))
-        
-            #Hierarchical lapse trial probability
-            problapsehier ~ dnorm(.3, pow(.15,-2))
-        
-            #Hierarchical drift rate to choice A
-            deltahier ~ dnorm(0, pow(2, -2))
-        
-            ##########
-            #Participant-level DDM parameter priors
-            ##########
-            for (p in 1:nparts) {
-        
-                #Non-decision time
-                ter[p] ~ dnorm(terhier, pow(tersd,-2))T(0, 1)
-        
-                #Boundary parameter (speed-accuracy tradeoff)
-                alpha[p] ~ dnorm(alphahier, pow(alphasd,-2))T(0, 3)
-        
-                #Rightward start point bias towards choice A
-                beta[p] ~ dnorm(betahier, pow(betasd,-2))T(0, 1)
-        
-                #Probability of a lapse trial
-                problapse[p] ~ dnorm(problapsehier, pow(problapsesd,-2))T(0, 1)
-                probDDM[p] <- 1 - problapse[p]
-        
+        ##########
+        #Between-condition variability parameters priors
+        ##########
+    
+        #Between-condition variability in drift rate to choice A
+        deltasdcond ~ dgamma(1,1)
+    
+        ##########
+        #Between-participant variability parameters priors
+        ##########
+    
+        #Between-participant variability in non-decision time
+        tersd ~ dgamma(.3,1)
+    
+        #Between-participant variability in Speed-accuracy trade-off
+        alphasd ~ dgamma(1,1)
+    
+        #Between-participant variability in choice A start point bias
+        betasd ~ dgamma(.3,1)
+    
+        #Between-participant variability in lapse trial probability
+        problapsesd ~ dgamma(.3,1)
+    
+        #Between-participant variability in drift rate to choice A
+        deltasd ~ dgamma(1,1)
+    
+        ##########
+        #Hierarchical DDM parameter priors
+        ##########
+    
+        #Hierarchical Non-decision time
+        terhier ~ dnorm(.5, pow(.25,-2))
+    
+        #Hierarchical boundary parameter (speed-accuracy tradeoff)
+        alphahier ~ dnorm(1, pow(.5,-2))
+    
+        #Hierarchical start point bias towards choice A
+        betahier ~ dnorm(.5, pow(.25,-2))
+    
+        #Hierarchical lapse trial probability
+        problapsehier ~ dnorm(.3, pow(.15,-2))
+    
+        #Hierarchical drift rate to choice A
+        deltahier ~ dnorm(0, pow(2, -2))
+    
+        ##########
+        #Participant-level DDM parameter priors
+        ##########
+        for (p in 1:nparts) {
+    
+            #Non-decision time
+            ter[p] ~ dnorm(terhier, pow(tersd,-2))T(0, 1)
+    
+            #Boundary parameter (speed-accuracy tradeoff)
+            alpha[p] ~ dnorm(alphahier, pow(alphasd,-2))T(0, 3)
+    
+            #Rightward start point bias towards choice A
+            beta[p] ~ dnorm(betahier, pow(betasd,-2))T(0, 1)
+    
+            #Probability of a lapse trial
+            problapse[p] ~ dnorm(problapsehier, pow(problapsesd,-2))T(0, 1)
+            probDDM[p] <- 1 - problapse[p]
+    
+            #Participant-level drift rate to choice A
+            deltapart[p] ~ dnorm(deltahier, pow(deltasd, -2))
+    
+            for (c in 1:nconds) {
+    
                 #Participant-level drift rate to choice A
-                deltapart[p] ~ dnorm(deltahier, pow(deltasd, -2))
-        
-                for (c in 1:nconds) {
-        
-                    #Participant-level drift rate to choice A
-                    delta[p,c] ~ dnorm(deltapart[p], pow(deltasdcond, -2))
-        
-                }
-        
+                delta[p,c] ~ dnorm(deltapart[p], pow(deltasdcond, -2))
+    
             }
-        
-            ##########
-            # Wiener likelihood and uniform mixture using Ones trick
-            for (i in 1:N) {
-        
-                # Log density for DDM process of rightward/leftward RT
-                ld_comp[i, 1] <- dlogwiener(y[i], alpha[participant[i]], ter[participant[i]], beta[participant[i]], delta[participant[i],condition[i]])
-        
-                # Log density for lapse trials (negative max RT to positive max RT)
-                ld_comp[i, 2] <- logdensity.unif(y[i], -3, 3)
-        
-                # Select one of these two densities (Mixture of nonlapse and lapse trials)
-                selected_density[i] <- exp(ld_comp[i, DDMorLapse[i]] - Constant)
-                
-                # Generate a likelihood for the MCMC sampler using a trick to maximize density value
-                Ones[i] ~ dbern(selected_density[i])
-        
-                # Probability of mind wandering trials (lapse trials)
-                DDMorLapse[i] ~ dcat( c(probDDM[participant[i]], problapse[participant[i]]) )
-            }
+    
         }
-        '''
-        
-        
-        # pyjags code
-        
-        # Make sure $LD_LIBRARY_PATH sees /usr/local/lib
-        # Make sure that the correct JAGS/modules-4/ folder contains wiener.so and wiener.la
-        pyjags.modules.load_module('wiener')
-        pyjags.modules.load_module('dic')
-        pyjags.modules.list_modules()
-        
-        nchains = 6
-        burnin = 2000  # Note that scientific notation breaks pyjags
-        nsamps = 10000
-        
-        modelfile = 'jagscode/recovery_test1.jags'
-        f = open(modelfile, 'w')
-        f.write(tojags)
-        f.close()
-        
-        # Track these variables
-        trackvars = ['deltasdcond', 
-                    'tersd', 'alphasd', 'betasd', 'problapsesd', 'deltasd',
-                    'terhier', 'alphahier', 'betahier', 'problapsehier','deltahier',
-                    'ter', 'alpha', 'beta', 'problapse', 'deltapart',
-                     'delta', 'DDMorLapse']
-        
-        N = np.squeeze(genparam['N'])
-        
-        # Input for mixture modeling
-        Ones = np.ones(N)
-        Constant = 20
-        
-        
-        #Fit model to data
-        y = np.squeeze(genparam['y'])
-        rt = np.squeeze(genparam['rt'])
-        participant = np.squeeze(genparam['participant'])
-        condition = np.squeeze(genparam['condition'])
-        nparts = np.squeeze(genparam['nparts'])
-        nconds = np.squeeze(genparam['nconds'])
-        
-        
-        minrt = np.zeros(nparts)
-        for p in range(0,nparts):
-            minrt[p] = np.min(rt[(participant == (p+1))])
-        
-        initials = []
-        for c in range(0, nchains):
-            chaininit = {
-                'deltasdcond': np.random.uniform(.1, 3.),
-                'tersd': np.random.uniform(.01, .2),
-                'alphasd': np.random.uniform(.01, 1.),
-                'betasd': np.random.uniform(.01, .2),
-                'problapsesd': np.random.uniform(.01, .5),
-                'deltasd': np.random.uniform(.1, 3.),
-                'deltapart': np.random.uniform(-4., 4., size=nparts),
-                'delta': np.random.uniform(-4., 4., size=(nparts,nconds)),
-                'ter': np.random.uniform(.1, .5, size=nparts),
-                'alpha': np.random.uniform(.5, 2., size=nparts),
-                'beta': np.random.uniform(.2, .8, size=nparts),
-                'problapse': np.random.uniform(.01, .1, size=nparts),
-                'deltahier': np.random.uniform(-4., 4.),
-                'terhier': np.random.uniform(.1, .5),
-                'alphahier': np.random.uniform(.5, 2.),
-                'betahier': np.random.uniform(.2, .8),
-                'problapsehier': np.random.uniform(.01, .1)
-            }
-            for p in range(0, nparts):
-                chaininit['ter'][p] = np.random.uniform(0., minrt[p]/2)
-            initials.append(chaininit)
-        print('Fitting model 1 ...')
-        threaded = pyjags.Model(file=modelfile, init=initials,
-                                data=dict(y=y, N=N, nparts=nparts, nconds=nconds, condition=condition,
-                                          participant=participant, Ones=Ones, Constant=Constant),
-                                chains=nchains, adapt=burnin, threads=6,
-                                progress_bar=True)
-        
-        checkSubs = []
-        try:
-            samples = threaded.sample(nsamps, vars=trackvars, thin=10)
-        except:
-            checkSubs.append(subject)
-            print('OOPs')
-        
-        savestring = ('modelfits/genparam_test1_model1.mat')
-        print('Saving results to: \n %s' % savestring)
-        sio.savemat(savestring, samples)
-        
-        #Diagnostics
-        samples = sio.loadmat(savestring)
-        samples_diagrelevant = samples.copy()
-        samples_diagrelevant.pop('DDMorLapse', None) #Remove variable DDMorLapse to obtain Rhat diagnostics
-        diags = diagnostic(samples_diagrelevant)
-        
-        #Posterior distributions
-        plt.figure()
-        jellyfish(samples['delta'])
-        plt.title('Posterior distributions of the drift-rate')
-        plt.savefig(('figures/delta_posteriors_model1.png'), format='png',bbox_inches="tight")
-        
-        plt.figure()
-        jellyfish(samples['ter'])
-        plt.title('Posterior distributions of the non-decision time parameter')
-        plt.savefig(('figures/ter_posteriors_model1.png'), format='png',bbox_inches="tight")
-        
-        plt.figure()
-        jellyfish(samples['beta'])
-        plt.title('Posterior distributions of the start point parameter')
-        plt.savefig(('figures/beta_posteriors_model1.png'), format='png',bbox_inches="tight")
-        
-        plt.figure()
-        jellyfish(samples['alpha'])
-        plt.title('Posterior distributions of boundary parameter')
-        plt.savefig(('figures/alpha_posteriors_model1.png'), format='png',bbox_inches="tight")
-        
-        #Recovery
-
+    
+        ##########
+        # Wiener likelihood and uniform mixture using Ones trick
+        for (i in 1:N) {
+    
+            # Log density for DDM process of rightward/leftward RT
+            ld_comp[i, 1] <- dlogwiener(y[i], alpha[participant[i]], ter[participant[i]], beta[participant[i]], delta[participant[i],condition[i]])
+    
+            # Log density for lapse trials (negative max RT to positive max RT)
+            ld_comp[i, 2] <- logdensity.unif(y[i], -3, 3)
+    
+            # Select one of these two densities (Mixture of nonlapse and lapse trials)
+            selected_density[i] <- exp(ld_comp[i, DDMorLapse[i]] - Constant)
+            
+            # Generate a likelihood for the MCMC sampler using a trick to maximize density value
+            Ones[i] ~ dbern(selected_density[i])
+    
+            # Probability of mind wandering trials (lapse trials)
+            DDMorLapse[i] ~ dcat( c(probDDM[participant[i]], problapse[participant[i]]) )
+        }
+    }
+    '''
+    
+    
+    # pyjags code
+    
+    # Make sure $LD_LIBRARY_PATH sees /usr/local/lib
+    # Make sure that the correct JAGS/modules-4/ folder contains wiener.so and wiener.la
+    pyjags.modules.load_module('wiener')
+    pyjags.modules.load_module('dic')
+    pyjags.modules.list_modules()
+    
+    nchains = 6
+    burnin = 2000  # Note that scientific notation breaks pyjags
+    nsamps = 10000
+    
+    modelfile = 'jagscode/recovery_test1.jags'
+    f = open(modelfile, 'w')
+    f.write(tojags)
+    f.close()
+    
+    # Track these variables
+    trackvars = ['deltasdcond', 
+                'tersd', 'alphasd', 'betasd', 'problapsesd', 'deltasd',
+                'terhier', 'alphahier', 'betahier', 'problapsehier','deltahier',
+                'ter', 'alpha', 'beta', 'problapse', 'deltapart',
+                 'delta', 'DDMorLapse']
+    
+    N = np.squeeze(genparam['N'])
+    
+    # Input for mixture modeling
+    Ones = np.ones(N)
+    Constant = 20
+    
+    
+    #Fit model to data
+    y = np.squeeze(genparam['y'])
+    rt = np.squeeze(genparam['rt'])
+    participant = np.squeeze(genparam['participant'])
+    condition = np.squeeze(genparam['condition'])
+    nparts = np.squeeze(genparam['nparts'])
+    nconds = np.squeeze(genparam['nconds'])
+    
+    
+    minrt = np.zeros(nparts)
+    for p in range(0,nparts):
+        minrt[p] = np.min(rt[(participant == (p+1))])
+    
+    initials = []
+    for c in range(0, nchains):
+        chaininit = {
+            'deltasdcond': np.random.uniform(.1, 3.),
+            'tersd': np.random.uniform(.01, .2),
+            'alphasd': np.random.uniform(.01, 1.),
+            'betasd': np.random.uniform(.01, .2),
+            'problapsesd': np.random.uniform(.01, .5),
+            'deltasd': np.random.uniform(.1, 3.),
+            'deltapart': np.random.uniform(-4., 4., size=nparts),
+            'delta': np.random.uniform(-4., 4., size=(nparts,nconds)),
+            'ter': np.random.uniform(.1, .5, size=nparts),
+            'alpha': np.random.uniform(.5, 2., size=nparts),
+            'beta': np.random.uniform(.2, .8, size=nparts),
+            'problapse': np.random.uniform(.01, .1, size=nparts),
+            'deltahier': np.random.uniform(-4., 4.),
+            'terhier': np.random.uniform(.1, .5),
+            'alphahier': np.random.uniform(.5, 2.),
+            'betahier': np.random.uniform(.2, .8),
+            'problapsehier': np.random.uniform(.01, .1)
+        }
+        for p in range(0, nparts):
+            chaininit['ter'][p] = np.random.uniform(0., minrt[p]/2)
+        initials.append(chaininit)
+    print('Fitting model 1 ...')
+    threaded = pyjags.Model(file=modelfile, init=initials,
+                            data=dict(y=y, N=N, nparts=nparts, nconds=nconds, condition=condition,
+                                      participant=participant, Ones=Ones, Constant=Constant),
+                            chains=nchains, adapt=burnin, threads=6,
+                            progress_bar=True)
+    
+    checkSubs = []
+    try:
+        samples = threaded.sample(nsamps, vars=trackvars, thin=10)
+    except:
+        checkSubs.append(subject)
+        print('OOPs')
+    
+    savestring = ('modelfits/allsubs_test1_model1.mat')
+    print('Saving results to: \n %s' % savestring)
+    sio.savemat(savestring, samples)
+    
+    #Diagnostics
+    samples = sio.loadmat(savestring)
+    samples_diagrelevant = samples.copy()
+    samples_diagrelevant.pop('DDMorLapse', None) #Remove variable DDMorLapse to obtain Rhat diagnostics
+    diags = diagnostic(samples_diagrelevant)
+    
+    #Posterior distributions
+    plt.figure()
+    jellyfish(samples['delta'])
+    plt.title('Posterior distributions of the drift-rate')
+    plt.savefig(('figures/delta_posteriors_model1.png'), format='png',bbox_inches="tight")
+    
+    plt.figure()
+    jellyfish(samples['ter'])
+    plt.title('Posterior distributions of the non-decision time parameter')
+    plt.savefig(('figures/ter_posteriors_model1.png'), format='png',bbox_inches="tight")
+    
+    plt.figure()
+    jellyfish(samples['beta'])
+    plt.title('Posterior distributions of the start point parameter')
+    plt.savefig(('figures/beta_posteriors_model1.png'), format='png',bbox_inches="tight")
+    
+    plt.figure()
+    jellyfish(samples['alpha'])
+    plt.title('Posterior distributions of boundary parameter')
+    plt.savefig(('figures/alpha_posteriors_model1.png'), format='png',bbox_inches="tight")
+    
+    #Recovery
